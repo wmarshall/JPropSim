@@ -1,5 +1,9 @@
 package com.wcmarshall.jpropsim.disassembler;
 
+import java.util.function.Predicate;
+
+import com.wcmarshall.jpropsim.Cog;
+
 public class Instruction {
 
 	public enum OpCode {
@@ -37,20 +41,38 @@ public class Instruction {
 		}
 	}
 
+	private static final Predicate<Cog> ifZ = c -> c.getZFlag();
+	private static final Predicate<Cog> ifC = c -> c.getCFlag();
+
 	public enum Condition {
 
-		IF_ALWAYS(0b1111), IF_NEVER(0b0000), IF_Z(0b1010), IF_NZ(0b0101), IF_C(0b1100), IF_NC(0b0011), IF_Z_AND_C(
-				0b1000), IF_Z_OR_C(0b1110), IF_Z_EQ_C(0b1001), IF_Z_NE_C(0b0110), IF_NZ_AND_NC(0b0001), IF_NZ_OR_NC(
-						0b0111), IF_Z_AND_NC(0b0010), IF_Z_OR_NC(0b1011), IF_NZ_AND_C(0b0100), IF_NZ_OR_C(0b1101);
+		IF_ALWAYS(0b1111, c -> true), IF_NEVER(0b0000, c -> false), IF_Z(0b1010, ifZ), IF_NZ(0b0101,
+				ifZ.negate()), IF_C(0b1100, ifC), IF_NC(0b0011, ifC.negate()), IF_Z_AND_C(0b1000,
+						ifZ.and(ifC)), IF_Z_OR_C(0b1110, ifZ.or(ifC)), IF_Z_EQ_C(0b1001,
+								c -> c.getZFlag() == c.getCFlag()), IF_Z_NE_C(0b0110,
+										c -> c.getZFlag() != c.getCFlag()), IF_NZ_AND_NC(0b0001,
+												ifZ.negate().and(ifC.negate())), IF_NZ_OR_NC(0b0111,
+														ifZ.negate().or(ifC.negate())), IF_Z_AND_NC(0b0010,
+																ifZ.and(ifC.negate())), IF_Z_OR_NC(0b1011,
+																		ifZ.or(ifC.negate())), IF_NZ_AND_C(0b0100,
+																				ifZ.negate().and(ifC)), IF_NZ_OR_C(
+																						0b1101, ifZ.negate().or(ifC));
 
 		private final int cond;
 
-		private Condition(int cond) {
+		private final Predicate<Cog> test;
+
+		private Condition(int cond, Predicate<Cog> test) {
 			this.cond = cond;
+			this.test = test;
 		}
 
 		public int getCond() {
 			return this.cond;
+		}
+
+		public boolean testCond(Cog c) {
+			return test.test(c);
 		}
 
 	}
@@ -85,6 +107,14 @@ public class Instruction {
 		}
 		this.destination = (encoded >> (32 - 6 - 4 - 4 - 9)) & 0b111111111;
 		this.source = (encoded >> (32 - 6 - 4 - 4 - 9 - 9)) & 0b111111111;
+	}
+
+	public void execute(Cog cog) {
+		if (this.condition.testCond(cog)) {
+			// Do work
+		}
+		;
+
 	}
 
 }
