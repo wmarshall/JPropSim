@@ -113,8 +113,6 @@ public class Instruction {
 		if (this.condition.testCond(cog)) {
 			// Do work
 		}
-		;
-
 	}
 
 }
