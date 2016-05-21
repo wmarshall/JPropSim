@@ -36,8 +36,14 @@ public class Hub {
 	}
 
 	public boolean isAligned(Cog cog) {
-		// TODO Auto-generated method stub
 		return this.alignment == cog.getId();
 	}
 
+	public void tick() {
+		for (Cog c : cogs) {
+			c.tick();
+		}
+		// update cnt
+
+	}
 }

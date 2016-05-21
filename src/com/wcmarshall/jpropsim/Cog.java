@@ -73,7 +73,7 @@ public class Cog {
 				new Instruction(cogram[pc]).execute(this);
 
 			} else {
-				if (hub.isAligned(this)) {
+				if (isHubAligned()) {
 					cogram[prog_load_count] = hub.getLong(this.hub_prog_addr + 4 * prog_load_count);
 					prog_load_count++;
 					if (prog_load_count > 0x1ef) {
@@ -92,6 +92,15 @@ public class Cog {
 	 */
 	public int getId() {
 		return id;
+	}
+
+	public int getClk() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	public boolean isHubAligned() {
+		return hub.isAligned(this);
 	}
 
 }
