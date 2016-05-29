@@ -36,7 +36,7 @@ public class Instruction {
                     return false;
                 }
             }
-        }
+        };
     }
 
     private static Predicate<Cog> waitPredicate() {
