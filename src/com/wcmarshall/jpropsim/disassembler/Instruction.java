@@ -284,10 +284,6 @@ public class Instruction {
         }
     }
 
-    >>>>>>>
-    initial readiness
-    for
-    instruction implementation
 
     public String toString() {
 
@@ -321,7 +317,7 @@ public class Instruction {
                 case SUBX:
                     opcode = "CMPX";
                     break;
-                case JMPRET:
+                case JMP:
                     dest = src;
                     src = "";
                     opcode = "JMP";
