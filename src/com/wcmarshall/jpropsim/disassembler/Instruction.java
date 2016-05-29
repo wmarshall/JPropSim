@@ -10,7 +10,7 @@ public class Instruction {
 
     private static Predicate<Cog> waitNPredicate(int n) {
         return new Predicate<Cog>() {
-            int count = n;
+            private int count = n;
 
             @Override
             public boolean test(Cog c) {
@@ -23,17 +23,29 @@ public class Instruction {
     private static Predicate<Cog> isAligned = c -> c.isHubAligned();
 
     private static Predicate<Cog> IOPredicate() {
-        return isAligned.and(waitNPredicate(8));
-    }
+        return new Predicate<Cog>() {
+            private Predicate<Cog> wait8 = waitNPredicate(8);
+            private boolean wasHubAligned = false;
 
-    ;
+            @Override
+            public boolean test(Cog cog) {
+                wasHubAligned = wasHubAligned || isAligned.test(cog);
+                if (wasHubAligned) {
+                    return wait8.test(cog);
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
 
     private static Predicate<Cog> waitPredicate() {
         return waitNPredicate(6);
     }
 
-    ;
-
+    /**
+     * Do not make static! Non-static prevents conditionals from affecting one another
+     */
     public enum OpCode {
         ABS(0b101010), ABSNEG(0b101011), ADD(0b100000), ADDABS(0b100010), ADDS(0b110100), ADDSX(0b110110), ADDX(
                 0b110010), AND(0b011000), ANDN(0b011001), CMPS(0b110000), CMPSUB(0b111000), CMPSX(0b110001), DJNZ(
@@ -42,7 +54,8 @@ public class Instruction {
                 0b011110), NEG(0b101001), NEGC(0b101100), NEGNC(0b101101), NEGNZ(
                 0b101111), NEGZ(0b101110), RCL(0b001101), RCR(0b001100), RDBYTE(
                 0b000000,
-                IOPredicate()), RDLONG(0b000010, IOPredicate()), RDWORD(
+                IOPredicate()),
+        RDLONG(0b000010, IOPredicate()), RDWORD(
                 0b000001,
                 IOPredicate()), REV(0b001111), ROL(0b001001), ROR(
                 0b001000), SAR(0b001110), SHL(0b001011), SHR(
@@ -95,6 +108,9 @@ public class Instruction {
     private static final Predicate<Cog> ifZ = c -> c.getZFlag();
     private static final Predicate<Cog> ifC = c -> c.getCFlag();
 
+    /**
+     * Do not make static! Non-static prevents conditionals from affecting one another
+     */
     public enum Condition {
 
         IF_ALWAYS(0b1111, c -> true), IF_NEVER(0b0000, c -> false), IF_Z(0b1010, ifZ), IF_NZ(0b0101,
