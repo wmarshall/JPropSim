@@ -75,6 +75,10 @@ public class Cog {
         cogram[PAR_ADDR] = arg;
     }
 
+    public boolean isHubAligned() {
+        return hub.isAligned(this);
+    }
+
     public void tick() {
         if (running) {
             if (prog_loaded) {
