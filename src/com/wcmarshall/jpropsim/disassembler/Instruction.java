@@ -43,11 +43,23 @@ public class Instruction {
         return waitNPredicate(6);
     }
 
+    private static BiConsumer<Cog, Instruction> incPC = (c, i) -> c.incrementPC();
+
     /**
      * Do not make static! Non-static prevents conditionals from affecting one another
      */
     public enum OpCode {
-        ABS(0b101010),
+        ABS(0b101010, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDest();
+                int result = Math.abs(source);
+                instruction.writeZ(cog, result == 0);
+                instruction.writeC(cog, result < 0);
+                instruction.writeResult(cog, dest, result);
+            }
+        }.andThen(incPC)),
         ABSNEG(0b101011),
         ADD(0b100000),
         ADDABS(0b100010),
@@ -109,10 +121,18 @@ public class Instruction {
 
         private final Predicate<Cog> executable;
 
-        private OpCode(int instr, Predicate<Cog> executable) {
+        private OpCode(int instr, Predicate<Cog> executable, BiConsumer<Cog, Instruction> exec_fn) {
             this.instr = instr;
-            this.exec_fn = null;
+            this.exec_fn = exec_fn;
             this.executable = executable;
+        }
+
+        private OpCode(int instr, BiConsumer<Cog, Instruction> exec_fn) {
+            this(instr, waitNPredicate(4), exec_fn);
+        }
+
+        private OpCode(int instr, Predicate<Cog> executable) {
+            this(instr, executable, null);
         }
 
         private OpCode(int instr) {
@@ -205,11 +225,15 @@ public class Instruction {
         this.source = (encoded >> (32 - 6 - 4 - 4 - 9 - 9)) & 0b111111111;
     }
 
+    public int getDest() {
+        return destination;
+    }
+
     public int getSourceValue(Cog cog) {
         if (this.immediate) {
-            return destination;
+            return source;
         }
-        return cog.getLong(this.destination);
+        return cog.getLong(this.source);
     }
 
     private void writeZ(Cog cog, boolean value) {
@@ -224,9 +248,9 @@ public class Instruction {
         }
     }
 
-    private void writeResult(Cog cog, int value) {
+    private void writeResult(Cog cog, int addr, int result) {
         if (this.write_result) {
-            // lol dunno
+            cog.setLong(addr, result);
         }
     }
 
@@ -251,7 +275,7 @@ public class Instruction {
     public void execute(Cog cog) {
         if (!this.condition.testCond(cog)) {
             if (NOPPredicate.test(cog)) {
-                cog.incrementPC();
+                incPC.accept(cog, this);
             }
         } else {
             if (this.canExecute(cog)) {
