@@ -32,7 +32,7 @@ public class Instruction {
 	public enum OpCode {
 		ABS(0b101010), ABSNEG(0b101011), ADD(0b100000), ADDABS(0b100010), ADDS(0b110100), ADDSX(0b110110), ADDX(
 				0b110010), AND(0b011000), ANDN(0b011001), CMPS(0b110000), CMPSUB(0b111000), CMPSX(0b110001), DJNZ(
-						0b111001), HUBOP(0b000011, IOPredicate()), JMP(0b010111), MOV(0b101000), MOVD(0b010101), MOVI(
+						0b111001), HUBOP(0b000011, IOPredicate()), JMPRET(0b010111), MOV(0b101000), MOVD(0b010101), MOVI(
 								0b010110), MOVS(0b010100), MUXC(0b011100), MUXNC(0b011101), MUXNZ(0b011111), MUXZ(
 										0b011110), NEG(0b101001), NEGC(0b101100), NEGNC(0b101101), NEGNZ(
 												0b101111), NEGZ(0b101110), RCL(0b001101), RCR(0b001100), RDBYTE(
@@ -84,7 +84,6 @@ public class Instruction {
 		public boolean isExecutable(Cog cog) {
 			return executable.test(cog);
 		}
-
 	}
 
 	private static final Predicate<Cog> ifZ = c -> c.getZFlag();
@@ -124,6 +123,8 @@ public class Instruction {
 
 	private OpCode opcode;
 
+	private Predicate<Cog> executeCondition;
+
 	private boolean write_zero, write_carry, write_result, immediate;
 
 	private Condition condition;
@@ -154,6 +155,7 @@ public class Instruction {
 				this.condition = condition;
 			}
 		}
+
 		this.destination = (encoded >> (32 - 6 - 4 - 4 - 9)) & 0b111111111;
 		this.source = (encoded >> (32 - 6 - 4 - 4 - 9 - 9)) & 0b111111111;
 	}
@@ -193,10 +195,22 @@ public class Instruction {
 	 */
 
 	public boolean canExecute(Cog cog) {
-		return opcode.isExecutable(cog);
+		return this.executeCondition.test(cog);
 	}
 
-	public void execute(Cog cog) {
+	public boolean execute(Cog cog) {
+
+		if (this.executeCondition == null) {
+			// in the first cycle, determine if the instruction will execute or not
+			// and set executeCondition appropriately
+			if (this.condition.testCond(cog))
+				// execute as expected
+				this.executeCondition = opcode.executable;
+			else
+				// consume 4 cycles
+				this.executeCondition = waitNPredicate(4);
+		}
+
 		if (this.canExecute(cog)) {
 			if (this.condition.testCond(cog)) {
 				boolean newz = false, newc = false;
@@ -212,7 +226,72 @@ public class Instruction {
 					cog.setCFlag(newc);
 				}
 			}
+
+			return true;
 		}
+
+		return false;
 	}
 
+	public String toString() {
+
+		String cond, opcode, dest, src;
+
+		cond = (this.condition.equals(Condition.IF_ALWAYS)) ? "" : this.condition.name();
+		opcode = this.opcode.name();
+		dest = String.format("0x%H", destination);
+		src = String.format("%s0x%H", (immediate) ? "#" : "", source);
+
+		if (!this.write_result)
+			switch (this.opcode) {
+				case RDBYTE:
+					opcode = "WRBYTE";
+					break;
+				case RDWORD:
+					opcode = "WRWORD";
+					break;
+				case RDLONG:
+					opcode = "WRLONG";
+					break;
+				case AND:
+					opcode = "TEST";
+					break;
+				case ANDN:
+					opcode = "TESTN";
+					break;
+				case SUB:
+					opcode = "CMP";
+					break;
+				case SUBX:
+					opcode = "CMPX";
+					break;
+				case JMPRET:
+					dest = src;
+					src = "";
+					opcode = "JMP";
+					break;
+			}
+
+		if (this.opcode.equals(OpCode.HUBOP)) {
+			src = "";
+			if (this.source == 0)
+				opcode = "CLKSET";
+			else if (this.source == 1)
+				opcode = "COGID";
+			else if (this.source == 2)
+				opcode = "COGINIT";
+			else if (this.source == 3)
+				opcode = "COGSTOP";
+			else if (this.source == 4)
+				opcode = "LOCKNEW";
+			else if (this.source == 5)
+				opcode = "LOCKRET";
+			else if (this.source == 6)
+				opcode = "LOCKSET";
+			else if (this.source == 7)
+				opcode = "LOCKCLR";
+		}
+
+		return String.format(" %-13s %-7s %-5s %-5s", cond, opcode, dest, src);
+	}
 }

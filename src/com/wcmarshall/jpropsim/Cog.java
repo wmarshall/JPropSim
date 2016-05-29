@@ -11,7 +11,7 @@ public class Cog {
 	private final int id;
 
 	private boolean running = false, prog_loaded = false;
-	private int hub_prog_addr = 0, prog_load_count = 0;;
+	private int hub_prog_addr = 0, prog_load_count = 0;
 
 	private int pc = 0;
 
@@ -22,6 +22,14 @@ public class Cog {
 	public Cog(Hub hub, int id) {
 		this.id = id;
 		this.hub = hub;
+	}
+
+	public int getPC() {
+		return pc;
+	}
+
+	public void setPC(int n) {
+		pc = n;
 	}
 
 	public boolean getZFlag() {
@@ -70,7 +78,8 @@ public class Cog {
 	public void tick() {
 		if (running) {
 			if (prog_loaded) {
-				new Instruction(cogram[pc]).execute(this);
+				if (new Instruction(cogram[pc]).execute(this))
+					pc++;
 
 			} else {
 				if (isHubAligned()) {

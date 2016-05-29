@@ -44,3 +44,8 @@ Icon?
 Thumbs.db
 # Other
 .venv
+
+# Editor files  #
+######################
+.idea
+*.iml
