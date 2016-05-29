@@ -24,6 +24,10 @@ public class Cog {
         this.hub = hub;
     }
 
+    public int getID() {
+        return id;
+    }
+
     public int getPC() {
         return pc;
     }
