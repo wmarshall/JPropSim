@@ -53,17 +53,39 @@ public class Cog {
     }
 
     public int getLong(int addr) {
-        if (addr > 0x1ef) {
-            // SPR code
+        switch (addr) {
+            case 0x1F0:
+                return 0; // ??
+            case 0x1F1:
+                return hub.getCnt();
+            case 0x1F2:
+                return hub.getIna();
+            case 0x1F3:
+                // unimplemented on P8X32A
+                return 0;
+            default:
+                return cogram[addr];
         }
-        return cogram[addr];
     }
 
     public void setLong(int addr, int value) {
-        if (addr > 0x1ef) {
-            // SPR code
+        switch (addr) {
+            case 0x1F0:
+            case 0x1F1:
+            case 0x1F2:
+            case 0x1F3:
+                return;
+            default:
+                cogram[addr] = value;
         }
-        cogram[addr] = value;
+    }
+
+    public Hub getHub() {
+        return hub;
+    }
+
+    public int getINA() {
+        return getLong(0x1F2);
     }
 
     public void start(int hub_prog_addr, int arg) {
@@ -81,6 +103,10 @@ public class Cog {
 
     public boolean isHubAligned() {
         return hub.isAligned(this);
+    }
+
+    public int getCnt() {
+        return hub.getCnt();
     }
 
     public void tick() {

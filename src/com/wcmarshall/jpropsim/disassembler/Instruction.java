@@ -496,23 +496,55 @@ public class Instruction {
         RDBYTE(0b000000, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
+                int hubAddr = instruction.getSourceValue(cog);
+                int cogAddr = instruction.getDest();
                 if (instruction.write_result) {     // RDBYTE
-                    // TODO
+                    int value = cog.getHub().getByte(hubAddr);
+                    instruction.writeC(cog, false);
+                    instruction.writeZ(cog, value == 0);
+                    instruction.writeResult(cog, cogAddr, value);
                 } else {                            // WRBYTE
-                    // TODO
+                    int value = cog.getLong(cogAddr);
+                    cog.getHub().setByte(hubAddr, value);
+                    instruction.writeC(cog, false);
+                    instruction.writeZ(cog, (hubAddr & 0b11) != 0);
                 }
             }
         }.andThen(incPC)),
         RDLONG(0b000010, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
-                // TODO
+                int hubAddr = instruction.getSourceValue(cog);
+                int cogAddr = instruction.getDest();
+                if (instruction.write_result) {     // RDLONG
+                    int value = cog.getHub().getLong(hubAddr);
+                    instruction.writeC(cog, false);
+                    instruction.writeZ(cog, value == 0);
+                    instruction.writeResult(cog, cogAddr, value);
+                } else {                            // WRLONG
+                    int value = cog.getLong(cogAddr);
+                    cog.getHub().setLong(hubAddr, value);
+                    instruction.writeC(cog, false);
+                    instruction.writeZ(cog, (hubAddr & 0b11) != 0);
+                }
             }
         }.andThen(incPC)),
         RDWORD(0b000001, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
-                // TODO
+                int hubAddr = instruction.getSourceValue(cog);
+                int cogAddr = instruction.getDest();
+                if (instruction.write_result) {     // RDWORD
+                    int value = cog.getHub().getWord(hubAddr);
+                    instruction.writeC(cog, false);
+                    instruction.writeZ(cog, value == 0);
+                    instruction.writeResult(cog, cogAddr, value);
+                } else {                            // WRWORD
+                    int value = cog.getLong(cogAddr);
+                    cog.getHub().setWord(hubAddr, value);
+                    instruction.writeC(cog, false);
+                    instruction.writeZ(cog, (hubAddr & 0b1) != 0);
+                }
             }
         }.andThen(incPC)),
         REV(0b001111, new BiConsumer<Cog, Instruction>() {
@@ -737,7 +769,7 @@ public class Instruction {
         WAITCNT(0b111110, waitPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
-                int cnt = 0; // TODO get the system counter
+                int cnt = cog.getCnt();
                 int delta = instruction.getSourceValue(cog);
                 int target = instruction.getDestValue(cog);
                 int result = target + delta;
@@ -753,13 +785,31 @@ public class Instruction {
         WAITPEQ(0b111100, waitPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
-                // TODO
+                int current = cog.getINA();
+                int target = instruction.getDestValue(cog);
+                int mask = instruction.getSourceValue(cog);
+
+                if ((current & mask) != target) return;
+
+                instruction.writeC(cog, false);
+                // ?!?!?!?!?! this is the actual behavior, shotty documentation
+                instruction.writeZ(cog, target + mask == 0);
+                instruction.writeResult(cog, instruction.getDest(), target+mask);
             }
         }),
         WAITPNE(0b111101, waitPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
-                // TODO
+                int current = cog.getINA();
+                int target = instruction.getDestValue(cog);
+                int mask = instruction.getSourceValue(cog);
+
+                if ((current & mask) == target) return;
+
+                // "whatever it naturally ended up being"
+                instruction.writeC(cog, target + mask + 1 == 0);
+                instruction.writeZ(cog, target + mask + 1 == 0);
+                instruction.writeResult(cog, instruction.getDest(), target+mask+1);
             }
         }),
         WAITVID(0b111111, new BiConsumer<Cog, Instruction>() {
