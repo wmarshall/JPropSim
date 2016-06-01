@@ -954,12 +954,12 @@ public class Instruction {
 
     private Condition condition;
 
-    private int destination, source;
+    private int destination, source, encodedInstr;
 
     private final Predicate<Cog> NOPPredicate = waitNPredicate(4);
 
     public Instruction(int encoded) {
-        int instr = encoded >> (32 - 6);
+        int instr = (encoded >> (32 - 6)) & 0b111111;
         for (OpCode opcode : OpCode.values()) {
             if (instr == opcode.getInstr()) {
                 this.opcode = opcode;
@@ -978,6 +978,7 @@ public class Instruction {
                 this.condition = condition;
             }
         }
+        this.encodedInstr = encoded;
         this.destination = (encoded >> (32 - 6 - 4 - 4 - 9)) & 0b111111111;
         this.source = (encoded >> (32 - 6 - 4 - 4 - 9 - 9)) & 0b111111111;
     }
@@ -1087,12 +1088,20 @@ public class Instruction {
 
     public String toString() {
 
-        String cond, opcode, dest, src;
+        String cond, opcode, dest, src, effects;
 
-        cond = (this.condition.equals(Condition.IF_ALWAYS)) ? "" : this.condition.name();
+        if (this.opcode == null) {
+            return String.format("%X %X %X %X", encodedInstr & 0xFF,
+                    (encodedInstr >> 8) & 0xFF, (encodedInstr >> 16) & 0xFF, (encodedInstr >> 24) & 0xFF);
+        }
+
+
         opcode = this.opcode.name();
+        cond = (this.condition.equals(Condition.IF_ALWAYS)) ? "" : this.condition.name();
         dest = register2string(destination, false);
         src = register2string(source, immediate);
+        effects = (this.write_result) ? "wr" : "nr";
+        effects += ((this.write_carry) ? ",wc" : "") + ((this.write_zero) ? ",wz" : "");
 
         if (!this.write_result)
             switch (this.opcode) {
@@ -1144,6 +1153,6 @@ public class Instruction {
                 opcode = "LOCKCLR";
         }
 
-        return String.format(" %-13s %-7s %-5s %-5s", cond, opcode, dest, src);
+        return String.format(" %-13s %-7s %-5s %-5s %s", cond, opcode, dest, src, effects);
     }
 }
