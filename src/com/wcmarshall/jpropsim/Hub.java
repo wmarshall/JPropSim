@@ -17,6 +17,49 @@ public class Hub {
         }
     }
 
+	/**
+	 * Initializes a COG
+	 *
+	 * @param arg parameter register. Must fit specifications outlined by COGINIT instruction
+	 * @return COG ID of initialized COG or -1 if no COGs are available
+     */
+	public int initCog(int arg) {
+
+		int par = ((arg >> 18) & 0b1111111_1111111) << 2;
+		int start = ((arg >> 4) & 0b1111111_1111111) << 2;
+		int cogid = arg & 0b111;
+		boolean cognew = ((arg >> 3) & 1) == 1;
+
+		if (cognew) {
+			int i;
+			for (i=0; i<NUM_COGS; i++) {
+				if (!cogs[i].isRunning())
+					break;
+			}
+			if (i == cogs.length) return -1;
+			cogid = cogs[i].getID();
+		}
+
+		cogs[cogid].start(start, par);
+		return cogid;
+	}
+
+	/**
+	 *
+	 * @param id cog to stop
+	 * @return carry bit, is true if all cogs were running prior to COGSTOP
+     */
+	public boolean stopCog(int id) {
+		boolean carry = true;
+		for (Cog c : cogs) {
+			carry = carry & c.isRunning();
+		}
+
+		id &= 0b111;
+		cogs[id].stop();
+		return carry;
+	}
+
     private int readBytes(int base, int count) {
         int retval = 0;
         for (int i = 0; i < count; i++) {
@@ -89,5 +132,9 @@ public class Hub {
         }
         // update cnt
 		cnt++;
+		if ((cnt & 1) == 0) {
+			// every other tick, shift alignment
+			this.alignment = (this.alignment + 1) % NUM_COGS;
+		}
     }
 }

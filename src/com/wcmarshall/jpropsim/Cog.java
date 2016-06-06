@@ -132,7 +132,7 @@ public class Cog {
 
     public void start(int hub_prog_addr, int arg) {
         for (int i = 0; i < 0x1ff; i++) {
-            cogram[i] = 0;
+            setLong(i, 0);
         }
         this.running = true;
         this.prog_loaded = false;
@@ -140,11 +140,19 @@ public class Cog {
         this.prog_load_count = 0;
         this.setCFlag(false);
         this.setZFlag(false);
-        cogram[PAR_ADDR] = arg;
+        setLong(PAR_ADDR, arg);
+    }
+
+    public void stop() {
+        running = false;
     }
 
     public boolean isHubAligned() {
         return hub.isAligned(this);
+    }
+
+    public boolean isRunning() {
+        return this.running;
     }
 
     public int getCnt() {
@@ -160,7 +168,7 @@ public class Cog {
                 setLong(PHSB_ADDR, counterB.tick(getLong(CTRB_ADDR), getLong(FRQB_ADDR), getLong(PHSB_ADDR)));
             } else {
                 if (isHubAligned()) {
-                    cogram[prog_load_count] = hub.getLong(this.hub_prog_addr + 4 * prog_load_count);
+                    this.setLong(prog_load_count, hub.getLong(this.hub_prog_addr + 4 * prog_load_count));
                     prog_load_count++;
                     if (prog_load_count > 0x1ef) {
                         prog_loaded = true;

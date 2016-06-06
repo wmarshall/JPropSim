@@ -213,15 +213,28 @@ public class Instruction {
         HUBOP(0b000011, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
-                // TODO create mechanism for HUBOP
+
+                int cogid;
+
                 switch (instruction.getSourceValue(cog)) {
                     case 0: // CLKSET
                         break;
                     case 1: // COGID
+                        cogid = cog.getID();
+                        instruction.writeResult(cog, instruction.getDest(), cogid);
+                        instruction.writeZ(cog, cogid == 0);
+                        instruction.writeC(cog, false);
                         break;
                     case 2: // COGINIT
+                        cogid = cog.getHub().initCog(instruction.getDestValue(cog));
+                        instruction.writeResult(cog, instruction.getDest(), (cogid == -1) ? 7 : cogid);
+                        instruction.writeZ(cog, cogid == 0);
+                        instruction.writeC(cog, cogid == -1);
                         break;
                     case 3: // COGSTOP
+                        cogid = instruction.getDestValue(cog);
+                        instruction.writeC(cog, cog.getHub().stopCog(cogid));
+                        instruction.writeZ(cog, cogid == 0);
                         break;
                     case 4: // LOCKNEW
                         break;
