@@ -66,7 +66,7 @@ public class Hub {
 	public int getDira() {
 		int dira = 0;
 		for (Cog c : cogs) {
-			dira |= c.getLong(0x1F6);
+			dira |= c.getLong(Cog.DIRA_ADDR);
 		}
 		return dira;
 	}
@@ -74,7 +74,7 @@ public class Hub {
 	public int getOuta() {
 		int outa = 0;
 		for (Cog c : cogs) {
-			outa |= c.getLong(0x1F4);
+			outa |= c.getLong(Cog.OUTA_ADDR);
 		}
 		return outa & getDira();
 	}

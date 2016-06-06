@@ -983,6 +983,10 @@ public class Instruction {
         this.source = (encoded >> (32 - 6 - 4 - 4 - 9 - 9)) & 0b111111111;
     }
 
+    public int getEncodedInstr() {
+        return encodedInstr;
+    }
+
     public int getDest() {
         return destination;
     }
@@ -1081,17 +1085,26 @@ public class Instruction {
             case 0x1FF:
                 return "VSCL";
             default:
-                return String.format("%s0x%H", (immediate) ? "#" : "", register);
+                return String.format("%s0x%03X", (immediate) ? "#" : "", register);
         }
     }
 
+    public boolean equals(Object o) {
+        if (o instanceof Instruction)
+            return ((Instruction) o).encodedInstr == this.encodedInstr;
+
+        if (o instanceof Integer)
+            return o.equals(this.encodedInstr);
+
+        return false;
+    }
 
     public String toString() {
 
         String cond, opcode, dest, src, effects;
 
         if (this.opcode == null) {
-            return String.format("%X %X %X %X", encodedInstr & 0xFF,
+            return String.format("               %02X  %02X  %02X  %02X", encodedInstr & 0xFF,
                     (encodedInstr >> 8) & 0xFF, (encodedInstr >> 16) & 0xFF, (encodedInstr >> 24) & 0xFF);
         }
 
@@ -1153,6 +1166,6 @@ public class Instruction {
                 opcode = "LOCKCLR";
         }
 
-        return String.format(" %-13s %-7s %-5s %-5s %s", cond, opcode, dest, src, effects);
+        return String.format(" %-13s %-7s %-6s %-6s %s", cond, opcode, dest, src, effects);
     }
 }

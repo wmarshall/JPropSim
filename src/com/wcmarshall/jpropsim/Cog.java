@@ -4,7 +4,22 @@ import com.wcmarshall.jpropsim.disassembler.Instruction;
 
 public class Cog {
 
-    private static final int PAR_ADDR = 0x1f0;
+    public static final int PAR_ADDR = 0x1F0;
+    public static final int CNT_ADDR = 0x1F1;
+    public static final int INA_ADDR = 0x1F2;
+    public static final int INB_ADDR = 0x1F3;
+    public static final int OUTA_ADDR = 0x1F4;
+    public static final int OUTB_ADDR = 0x1F5;
+    public static final int DIRA_ADDR = 0x1F6;
+    public static final int DIRB_ADDR = 0x1F7;
+    public static final int CTRA_ADDR = 0x1F8;
+    public static final int CTRB_ADDR = 0x1F9;
+    public static final int FRQA_ADDR = 0x1FA;
+    public static final int FRQB_ADDR = 0x1FB;
+    public static final int PHSA_ADDR = 0x1FC;
+    public static final int PHSB_ADDR = 0x1FD;
+    public static final int VCFG_ADDR = 0x1FE;
+    public static final int VSCL_ADDR = 0x1FF;
 
     private final Hub hub;
 
@@ -19,9 +34,15 @@ public class Cog {
 
     private boolean zflag = false, cflag = false;
 
+    private Instruction current, next;
+
+    private Counter counterA, counterB;
+
     public Cog(Hub hub, int id) {
         this.id = id;
         this.hub = hub;
+        this.counterA = new Counter(this);
+        this.counterB = new Counter(this);
     }
 
     public int getID() {
@@ -34,6 +55,14 @@ public class Cog {
 
     public void setPC(int n) {
         pc = n;
+        current = new Instruction(cogram[pc]);
+        next = new Instruction(cogram[pc+1]);
+    }
+
+    public void incrementPC() {
+        pc++;
+        current = next;
+        next = new Instruction(cogram[pc+1]);
     }
 
     public boolean getZFlag() {
@@ -54,13 +83,11 @@ public class Cog {
 
     public int getLong(int addr) {
         switch (addr) {
-            case 0x1F0:
-                return 0; // ??
-            case 0x1F1:
+            case CNT_ADDR:
                 return hub.getCnt();
-            case 0x1F2:
+            case INA_ADDR:
                 return hub.getIna();
-            case 0x1F3:
+            case INB_ADDR:
                 // unimplemented on P8X32A
                 return 0;
             default:
@@ -70,14 +97,29 @@ public class Cog {
 
     public void setLong(int addr, int value) {
         switch (addr) {
-            case 0x1F0:
-            case 0x1F1:
-            case 0x1F2:
-            case 0x1F3:
+            case PAR_ADDR:
+            case CNT_ADDR:
+            case INA_ADDR:
+            case INB_ADDR:
                 return;
             default:
                 cogram[addr] = value;
         }
+    }
+
+    public void setPinOut(int pin, boolean state) {
+        if (pin > 31) return;
+
+        if (state) {
+            setLong(OUTA_ADDR, getLong(OUTA_ADDR) | (1 << pin));
+        } else {
+            setLong(OUTA_ADDR, getLong(OUTA_ADDR) & ~(1 << pin));
+        }
+    }
+
+    public boolean getPinIn(int pin) {
+        if (pin > 31) return false;
+        return ((getLong(INA_ADDR) >> pin) & 1) == 1;
     }
 
     public Hub getHub() {
@@ -85,7 +127,7 @@ public class Cog {
     }
 
     public int getINA() {
-        return getLong(0x1F2);
+        return getLong(INA_ADDR);
     }
 
     public void start(int hub_prog_addr, int arg) {
@@ -112,14 +154,17 @@ public class Cog {
     public void tick() {
         if (running) {
             if (prog_loaded) {
-                new Instruction(cogram[getPC()]).execute(this);
-
+                current.execute(this);
+                // update counters
+                setLong(PHSA_ADDR, counterA.tick(getLong(CTRA_ADDR), getLong(FRQA_ADDR), getLong(PHSA_ADDR)));
+                setLong(PHSB_ADDR, counterB.tick(getLong(CTRB_ADDR), getLong(FRQB_ADDR), getLong(PHSB_ADDR)));
             } else {
                 if (isHubAligned()) {
                     cogram[prog_load_count] = hub.getLong(this.hub_prog_addr + 4 * prog_load_count);
                     prog_load_count++;
                     if (prog_load_count > 0x1ef) {
                         prog_loaded = true;
+                        setPC(0);
                     }
 
                 }
@@ -128,10 +173,4 @@ public class Cog {
         }
 
     }
-
-    public void incrementPC() {
-        setPC(getPC() + 1);
-    }
-
-
 }
