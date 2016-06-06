@@ -65,6 +65,10 @@ public class Cog {
         next = new Instruction(cogram[pc+1]);
     }
 
+    public int[] getCogram() {
+        return cogram.clone();
+    }
+
     public boolean getZFlag() {
         return zflag;
     }
@@ -174,11 +178,8 @@ public class Cog {
                         prog_loaded = true;
                         setPC(0);
                     }
-
                 }
             }
-
         }
-
     }
 }
