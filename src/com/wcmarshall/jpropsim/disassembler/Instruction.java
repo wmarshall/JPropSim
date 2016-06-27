@@ -201,7 +201,7 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
 
-                if (result == 0) {
+                if (result != 0) {
                     cog.setPC(source & 0x1FF);
                 } else {
                     // I really don't know the proper way to do this. So I am just going to make this a NOP and re-execute
@@ -327,19 +327,40 @@ public class Instruction {
             // TODO make mechanism for pipeline
             @Override
             public void accept(Cog cog, Instruction instruction) {
+                int value = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                dest &= ~(0b111111111 << 9);
+                dest |= value << 9;
 
+                instruction.writeC(cog, dest < 0);
+                instruction.writeZ(cog, dest == 0);
+                instruction.writeResult(cog, instruction.getDest(), dest);
             }
         }.andThen(incPC)),
         MOVI(0b010110, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
+                int value = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                dest &= ~(0b111111 << 23);
+                dest |= value << 23;
 
+                instruction.writeC(cog, dest < 0);
+                instruction.writeZ(cog, dest == 0);
+                instruction.writeResult(cog, instruction.getDest(), dest);
             }
         }.andThen(incPC)),
         MOVS(0b010100, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
+                int value = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                dest &= ~(0b111111111);
+                dest |= value;
 
+                instruction.writeC(cog, dest < 0);
+                instruction.writeZ(cog, dest == 0);
+                instruction.writeResult(cog, instruction.getDest(), dest);
             }
         }.andThen(incPC)),
         MUXC(0b011100, new BiConsumer<Cog, Instruction>() {
