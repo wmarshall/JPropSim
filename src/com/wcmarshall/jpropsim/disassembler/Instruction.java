@@ -8,30 +8,30 @@ import java.util.function.Predicate;
 public class Instruction {
 
 
-    private static Predicate<Cog> waitNPredicate(int n) {
-        return new Predicate<Cog>() {
-            private int count = n - 1;
+    private static Predicate<Instruction> waitNPredicate(int n) {
+        return new Predicate<Instruction>() {
+            private int target = n;
 
             @Override
-            public boolean test(Cog c) {
-                return ((count > 0) ? (count--) : count) == 0;
+            public boolean test(Instruction i) {
+                return i.getCycles() >= target;
             }
 
         };
     }
 
-    private static Predicate<Cog> isAligned = c -> c.isHubAligned();
+    private static Predicate<Instruction> isAligned = i -> i.getCog().isHubAligned();
 
-    private static Predicate<Cog> IOPredicate() {
-        return new Predicate<Cog>() {
-            private Predicate<Cog> wait8 = waitNPredicate(8);
+    private static Predicate<Instruction> IOPredicate() {
+        return new Predicate<Instruction>() {
+            private Predicate<Instruction> wait8 = waitNPredicate(8);
             private boolean wasHubAligned = false;
 
             @Override
-            public boolean test(Cog cog) {
-                wasHubAligned = wasHubAligned || isAligned.test(cog);
+            public boolean test(Instruction i) {
+                wasHubAligned = wasHubAligned || isAligned.test(i);
                 if (wasHubAligned) {
-                    return wait8.test(cog);
+                    return wait8.test(i);
                 } else {
                     return false;
                 }
@@ -39,7 +39,7 @@ public class Instruction {
         };
     }
 
-    private static Predicate<Cog> waitPredicate() {
+    private static Predicate<Instruction> waitPredicate() {
         return waitNPredicate(6);
     }
 
@@ -848,9 +848,9 @@ public class Instruction {
 
         private final BiConsumer<Cog, Instruction> exec_fn;
 
-        private final Predicate<Cog> executable;
+        private final Predicate<Instruction> executable;
 
-        private OpCode(int instr, Predicate<Cog> executable, BiConsumer<Cog, Instruction> exec_fn) {
+        private OpCode(int instr, Predicate<Instruction> executable, BiConsumer<Cog, Instruction> exec_fn) {
             this.instr = instr;
             this.exec_fn = exec_fn;
             this.executable = executable;
@@ -860,7 +860,7 @@ public class Instruction {
             this(instr, waitNPredicate(4), exec_fn);
         }
 
-        private OpCode(int instr, Predicate<Cog> executable) {
+        private OpCode(int instr, Predicate<Instruction> executable) {
             this(instr, executable, null);
         }
 
@@ -872,8 +872,8 @@ public class Instruction {
             return this.instr;
         }
 
-        public boolean isExecutable(Cog cog) {
-            return executable.test(cog);
+        public boolean isExecutable(Instruction i) {
+            return executable.test(i);
         }
 
         public void execute(Cog cog, Instruction ins) {
@@ -961,17 +961,19 @@ public class Instruction {
         }
     }
 
+    private Cog cog;
+
     private OpCode opcode;
 
     private boolean write_zero, write_carry, write_result, immediate;
 
     private Condition condition;
 
-    private int destination, source, encodedInstr;
+    private int destination, source, encodedInstr, cycleCount;
 
-    private final Predicate<Cog> NOPPredicate = waitNPredicate(4);
+    private final Predicate<Instruction> NOPPredicate = waitNPredicate(4);
 
-    public Instruction(int encoded) {
+    public Instruction(Cog c, int encoded) {
         int instr = (encoded >> (32 - 6)) & 0b111111;
         for (OpCode opcode : OpCode.values()) {
             if (instr == opcode.getInstr()) {
@@ -991,6 +993,8 @@ public class Instruction {
                 this.condition = condition;
             }
         }
+        this.cog = c;
+        this.cycleCount = 0;
         this.encodedInstr = encoded;
         this.destination = (encoded >> (32 - 6 - 4 - 4 - 9)) & 0b111111111;
         this.source = (encoded >> (32 - 6 - 4 - 4 - 9 - 9)) & 0b111111111;
@@ -1015,6 +1019,14 @@ public class Instruction {
         return cog.getLong(this.source);
     }
 
+    public Cog getCog() {
+        return cog;
+    }
+
+    public int getCycles() {
+        return cycleCount;
+    }
+
     private void writeZ(Cog cog, boolean value) {
         if (this.write_zero) {
             cog.setZFlag(value);
@@ -1037,27 +1049,24 @@ public class Instruction {
      * Execution occurs in phases 1. Test Condition - 0 cycles 2. perform
      * operation (or do nothing) - 4-23 cycles 3. Write result (or not) - 0
      * cycles 4. Write Z (or not) - 0 cycles 5. Write C (or not) - 0 cycles
-     *
-     * @param cog Cog to execute on
      */
 
-    public boolean canExecute(Cog cog) {
-        return opcode.isExecutable(cog);
+    public boolean canExecute() {
+        return opcode.isExecutable(this);
     }
 
     /**
      * Called once per clock tick
      * Updates cog.pc when it's time to move on
-     *
-     * @param cog
      */
-    public void execute(Cog cog) {
+    public void execute() {
+        cycleCount++;
         if (!this.condition.testCond(cog)) {
-            if (NOPPredicate.test(cog)) {
+            if (NOPPredicate.test(this)) {
                 incPC.accept(cog, this);
             }
         } else {
-            if (this.canExecute(cog)) {
+            if (this.canExecute()) {
                 this.opcode.execute(cog, this);
             }
         }

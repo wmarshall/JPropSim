@@ -55,14 +55,14 @@ public class Cog {
 
     public void setPC(int n) {
         pc = n;
-        current = new Instruction(cogram[pc]);
-        next = new Instruction(cogram[pc+1]);
+        current = new Instruction(this, cogram[pc]);
+        next = new Instruction(this, cogram[pc+1]);
     }
 
     public void incrementPC() {
         pc++;
         current = next;
-        next = new Instruction(cogram[pc+1]);
+        next = new Instruction(this, cogram[pc+1]);
     }
 
     public int[] getCogram() {
@@ -144,7 +144,7 @@ public class Cog {
         this.prog_load_count = 0;
         this.setCFlag(false);
         this.setZFlag(false);
-        setLong(PAR_ADDR, arg);
+        cogram[PAR_ADDR] = arg;
     }
 
     public void stop() {
@@ -166,7 +166,7 @@ public class Cog {
     public void tick() {
         if (running) {
             if (prog_loaded) {
-                current.execute(this);
+                current.execute();
                 // update counters
                 setLong(PHSA_ADDR, counterA.tick(getLong(CTRA_ADDR), getLong(FRQA_ADDR), getLong(PHSA_ADDR)));
                 setLong(PHSB_ADDR, counterB.tick(getLong(CTRB_ADDR), getLong(FRQB_ADDR), getLong(PHSB_ADDR)));

@@ -4,6 +4,7 @@ import com.wcmarshall.jpropsim.Cog;
 import com.wcmarshall.jpropsim.Hub;
 import com.wcmarshall.jpropsim.disassembler.Disassembler;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Scanner;
 
@@ -17,7 +18,7 @@ public class ExecutionTest {
         Hub hub = null;
 
         try {
-            hub = new Hub();
+            hub = new Hub(new File("PropPWM.binary"));
         } catch (IOException e) {
             System.out.println("Unable to open ROM file");
             user.close();
@@ -52,12 +53,14 @@ public class ExecutionTest {
                     Cog c = hub.getCog(cog);
                     System.out.printf("\nCOGID:  %d\nSTATUS: %s\nPC:     %04X\n",
                             c.getID(), (c.isRunning()) ? "Running" : "Stopped", c.getPC());
+                    System.out.println(disasm.disassemble(c.getLong(c.getPC())));
                 } else {
                     System.out.printf("\nCNT: %08X\nHUB: %d\nCOGS:\n", hub.getCnt(), hub.getAlignment());
                     for (int i=0; i<8; i++) {
                         Cog c = hub.getCog(i);
                         System.out.printf("COGID: %d STATUS: %s PC: %04X\n",
                                 c.getID(), (c.isRunning()) ? "Running" : "Stopped", c.getPC());
+                        System.out.println(disasm.disassemble(c.getLong(c.getPC())));
                     }
                 }
 
@@ -73,6 +76,19 @@ public class ExecutionTest {
                 System.out.printf("\nCOGID:  %d\nSTATUS: %s\nPC:     %04X\n",
                         c.getID(), (c.isRunning()) ? "Running" : "Stopped", c.getPC());
                 System.out.println(disasm.generateListing(c.getCogram()));
+            } else if (cmd.equalsIgnoreCase("get")) {
+                System.out.print("\nSTART: ");
+                int addr = user.nextInt();
+                System.out.print("\nLENGTH: ");
+                int length = user.nextInt();
+
+                for (int i=0; i<length; i+=8) {
+                    System.out.printf("\n%04X    ", addr);
+                    for (int j=0; j<Math.min(length-i, 8); j++) {
+                        System.out.printf("%02X", hub.getByte(addr+i+j));
+                        if (j == 3) System.out.print("  ");
+                    }
+                }
             } else if (cmd.equalsIgnoreCase("listio")) {
                 String ina = String.format("%32s", Integer.toBinaryString(hub.getIna())).replace(' ', '0');
                 String outa = String.format("%32s", Integer.toBinaryString(hub.getOuta())).replace(' ', '0');
