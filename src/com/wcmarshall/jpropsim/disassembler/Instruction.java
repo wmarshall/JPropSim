@@ -203,7 +203,7 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
 
-                if (result == 0) {
+                if (result != 0) {
                     cog.setPC(source & 0x1FF);
                 } else {
                     // I really don't know the proper way to do this. So I am just going to make this a NOP and re-execute
