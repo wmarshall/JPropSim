@@ -215,15 +215,28 @@ public class Instruction {
         public OpCode HUBOP = new OpCode(0b000011, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
-                // TODO create mechanism for HUBOP
+
+                int cogid;
+
                 switch (instruction.getSourceValue(cog)) {
                     case 0: // CLKSET
                         break;
                     case 1: // COGID
+                        cogid = cog.getID();
+                        instruction.writeResult(cog, instruction.getDest(), cogid);
+                        instruction.writeZ(cog, cogid == 0);
+                        instruction.writeC(cog, false);
                         break;
                     case 2: // COGINIT
+                        cogid = cog.getHub().initCog(instruction.getDestValue(cog));
+                        instruction.writeResult(cog, instruction.getDest(), (cogid == -1) ? 7 : cogid);
+                        instruction.writeZ(cog, cogid == 0);
+                        instruction.writeC(cog, cogid == -1);
                         break;
                     case 3: // COGSTOP
+                        cogid = instruction.getDestValue(cog);
+                        instruction.writeC(cog, cog.getHub().stopCog(cogid));
+                        instruction.writeZ(cog, cogid == 0);
                         break;
                     case 4: // LOCKNEW
                         break;
@@ -1060,6 +1073,10 @@ public class Instruction {
         this.source = (encoded >> (32 - 6 - 4 - 4 - 9 - 9)) & 0b111111111;
     }
 
+    public int getEncodedInstr() {
+        return encodedInstr;
+    }
+
     public int getDest() {
         return destination;
     }
@@ -1158,17 +1175,26 @@ public class Instruction {
             case 0x1FF:
                 return "VSCL";
             default:
-                return String.format("%s0x%H", (immediate) ? "#" : "", register);
+                return String.format("%s0x%03X", (immediate) ? "#" : "", register);
         }
     }
 
+    public boolean equals(Object o) {
+        if (o instanceof Instruction)
+            return ((Instruction) o).encodedInstr == this.encodedInstr;
+
+        if (o instanceof Integer)
+            return o.equals(this.encodedInstr);
+
+        return false;
+    }
 
     public String toString() {
 
         String cond, opcode, dest, src, effects;
 
         if (this.opcode == null) {
-            return String.format("%X %X %X %X", encodedInstr & 0xFF,
+            return String.format("               %02X  %02X  %02X  %02X", encodedInstr & 0xFF,
                     (encodedInstr >> 8) & 0xFF, (encodedInstr >> 16) & 0xFF, (encodedInstr >> 24) & 0xFF);
         }
 
@@ -1224,6 +1250,6 @@ public class Instruction {
                 opcode = "LOCKCLR";
         }
 
-        return String.format(" %-13s %-7s %-5s %-5s %s", cond, opcode, dest, src, effects);
+        return String.format(" %-13s %-7s %-6s %-6s %s", cond, opcode, dest, src, effects);
     }
 }

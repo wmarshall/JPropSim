@@ -1,31 +1,97 @@
 package com.wcmarshall.jpropsim;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+
 public class Hub {
 
     private static final int NUM_COGS = 8;
     private static final int HUB_RAM_SIZE = 32768;
+	private static final int HUB_ROM_SIZE = 32768;
     private Cog[] cogs = new Cog[NUM_COGS];
     private byte[] hubram = new byte[HUB_RAM_SIZE];
+	private byte[] hubrom = new byte[HUB_ROM_SIZE];
 
     private int alignment = 0;
 	private int cnt = 0;
 	private int ina = 0;
 
-    public Hub() {
+    public Hub() throws IOException {
         for (int i = 0; i < cogs.length; i++) {
             cogs[i] = new Cog(this, i);
         }
+
+		FileInputStream input = new FileInputStream(new File("rom.bin"));
+		input.read(hubrom);
+		input.close();
     }
 
+	/**
+	 * Initializes a COG
+	 *
+	 * @param arg parameter register. Must fit specifications outlined by COGINIT instruction
+	 * @return COG ID of initialized COG or -1 if no COGs are available
+     */
+	public int initCog(int arg) {
+
+		int par = ((arg >> 18) & 0b1111111_1111111) << 2;
+		int start = ((arg >> 4) & 0b1111111_1111111) << 2;
+		int cogid = arg & 0b111;
+		boolean cognew = ((arg >> 3) & 1) == 1;
+
+		if (cognew) {
+			int i;
+			for (i=0; i<NUM_COGS; i++) {
+				if (!cogs[i].isRunning())
+					break;
+			}
+			if (i == cogs.length) return -1;
+			cogid = cogs[i].getID();
+		}
+
+		cogs[cogid].start(start, par);
+		return cogid;
+	}
+
+	/**
+	 *
+	 * @param id cog to stop
+	 * @return carry bit, is true if all cogs were running prior to COGSTOP
+     */
+	public boolean stopCog(int id) {
+		boolean carry = true;
+		for (Cog c : cogs) {
+			carry = carry & c.isRunning();
+		}
+
+		id &= 0b111;
+		cogs[id].stop();
+		return carry;
+	}
+
     private int readBytes(int base, int count) {
-        int retval = 0;
-        for (int i = 0; i < count; i++) {
-            retval |= (0xFF & hubram[base + i]) << 8 * i;
-        }
+
+		int retval = 0;
+		byte[] memory;
+
+		if (base < HUB_RAM_SIZE) {
+			memory = hubram;
+		} else {
+			memory = hubrom;
+			base -= HUB_RAM_SIZE;
+		}
+
+		for (int i = 0; i < count; i++) {
+			retval |= (0xFF & memory[base + i]) << 8 * i;
+		}
+
         return retval;
     }
 
 	private void writeBytes(int base, int value, int count) {
+		if (base >= HUB_RAM_SIZE) return;
+
 		for (int i = 0; i < count; i++) {
 			hubram[base + i] = (byte) (value >> 8 * i);
 		}
@@ -63,10 +129,20 @@ public class Hub {
 		return ina & ~getDira();
 	}
 
+	public void setPinIn(int pin, boolean state) {
+		if (pin > 31) return;
+
+		if (state) {
+			ina |= 1 << pin;
+		} else {
+			ina &= ~(1 << pin);
+		}
+	}
+
 	public int getDira() {
 		int dira = 0;
 		for (Cog c : cogs) {
-			dira |= c.getLong(0x1F6);
+			dira |= c.getLong(Cog.DIRA_ADDR);
 		}
 		return dira;
 	}
@@ -74,14 +150,24 @@ public class Hub {
 	public int getOuta() {
 		int outa = 0;
 		for (Cog c : cogs) {
-			outa |= c.getLong(0x1F4);
+			// for a cog to set a pin high it must also set it to output in it's own DIRA register
+			outa |= c.getLong(Cog.OUTA_ADDR) & c.getLong(Cog.DIRA_ADDR);
 		}
 		return outa & getDira();
+	}
+
+	public Cog getCog(int cogid) {
+		if (cogid < 0 || cogid > NUM_COGS) return null;
+		return cogs[cogid];
 	}
 
     public boolean isAligned(Cog cog) {
         return this.alignment == cog.getID();
     }
+
+	public int getAlignment() {
+		return alignment;
+	}
 
     public void tick() {
         for (Cog c : cogs) {
@@ -89,5 +175,9 @@ public class Hub {
         }
         // update cnt
 		cnt++;
+		if ((cnt & 1) == 0) {
+			// every other tick, shift alignment
+			this.alignment = (this.alignment + 1) % NUM_COGS;
+		}
     }
 }
