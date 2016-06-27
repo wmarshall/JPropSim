@@ -2,6 +2,8 @@ package com.wcmarshall.jpropsim.disassembler;
 
 import com.wcmarshall.jpropsim.Cog;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
@@ -48,8 +50,8 @@ public class Instruction {
     /**
      * Do not make static! Non-static prevents conditionals from affecting one another
      */
-    public enum OpCode {
-        ABS(0b101010, new BiConsumer<Cog, Instruction>() {
+    public class OpCode {
+        public OpCode ABS = new OpCode(0b101010, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -59,114 +61,114 @@ public class Instruction {
                 instruction.writeC(cog, result < 0);
                 instruction.writeResult(cog, dest, result);
             }
-        }.andThen(incPC)),
-        ABSNEG(0b101011, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = instruction.getSourceValue(cog);
-				int dest = instruction.getDest();
-				int result = -Math.abs(source);
-				instruction.writeZ(cog, result == 0);
-				instruction.writeC(cog, result < 0);
-				instruction.writeResult(cog, dest, result);
-			}
-		}.andThen(incPC)),
-        ADD(0b100000, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = instruction.getSourceValue(cog);
-				int dest = instruction.getDestValue(cog);
-				int result = source + dest;
-				instruction.writeC(cog, getUnsignedCarry(source, dest));
-				instruction.writeZ(cog, result == 0);
-				instruction.writeResult(cog, instruction.getDest(), result);
-			}
-		}.andThen(incPC)),
-        ADDABS(0b100010, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = Math.abs(instruction.getSourceValue(cog));
-				int dest = instruction.getDestValue(cog);
-				int result = source + dest;
-				instruction.writeC(cog, getUnsignedCarry(source, dest));
-				instruction.writeZ(cog, result == 0);
-				instruction.writeResult(cog, instruction.getDest(), result);
-			}
-		}.andThen(incPC)),
-        ADDS(0b110100, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = instruction.getSourceValue(cog);
-				int dest = instruction.getDestValue(cog);
-				int result = source + dest;
-				instruction.writeC(cog, getSignedCarry(source, dest));
-				instruction.writeZ(cog, result == 0);
-				instruction.writeResult(cog, instruction.getDest(), result);
-			}
-		}.andThen(incPC)),
-        ADDSX(0b110110, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = instruction.getSourceValue(cog);
-				int dest = instruction.getDestValue(cog);
-				int carry = (cog.getCFlag()) ? 1 : 0;
-				int result = source + dest + carry;
-				instruction.writeC(cog, getSignedCarry(source, dest+carry));
-				instruction.writeZ(cog, result == 0 && cog.getZFlag());
-				instruction.writeResult(cog, instruction.getDest(), result);
-			}
-		}.andThen(incPC)),
-        ADDX(0b110010, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = instruction.getSourceValue(cog);
-				int dest = instruction.getDestValue(cog);
-				int carry = (cog.getCFlag()) ? 1 : 0;
-				int result = source + dest + carry;
-				instruction.writeC(cog, getUnsignedCarry(source, dest+carry));
-				instruction.writeZ(cog, result == 0 && cog.getZFlag());
-				instruction.writeResult(cog, instruction.getDest(), result);
-			}
-		}.andThen(incPC)),
-        AND(0b011000, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = instruction.getSourceValue(cog);
-				int dest = instruction.getDestValue(cog);
-				int result = source & dest;
+        }.andThen(incPC));
+        public OpCode ABSNEG = new OpCode(0b101011, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDest();
+                int result = -Math.abs(source);
+                instruction.writeZ(cog, result == 0);
+                instruction.writeC(cog, result < 0);
+                instruction.writeResult(cog, dest, result);
+            }
+        }.andThen(incPC));
+        public OpCode ADD = new OpCode(0b100000, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                int result = source + dest;
+                instruction.writeC(cog, getUnsignedCarry(source, dest));
+                instruction.writeZ(cog, result == 0);
+                instruction.writeResult(cog, instruction.getDest(), result);
+            }
+        }.andThen(incPC));
+        public OpCode ADDABS = new OpCode(0b100010, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = Math.abs(instruction.getSourceValue(cog));
+                int dest = instruction.getDestValue(cog);
+                int result = source + dest;
+                instruction.writeC(cog, getUnsignedCarry(source, dest));
+                instruction.writeZ(cog, result == 0);
+                instruction.writeResult(cog, instruction.getDest(), result);
+            }
+        }.andThen(incPC));
+        public OpCode ADDS = new OpCode(0b110100, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                int result = source + dest;
+                instruction.writeC(cog, getSignedCarry(source, dest));
+                instruction.writeZ(cog, result == 0);
+                instruction.writeResult(cog, instruction.getDest(), result);
+            }
+        }.andThen(incPC));
+        public OpCode ADDSX = new OpCode(0b110110, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                int carry = (cog.getCFlag()) ? 1 : 0;
+                int result = source + dest + carry;
+                instruction.writeC(cog, getSignedCarry(source, dest + carry));
+                instruction.writeZ(cog, result == 0 && cog.getZFlag());
+                instruction.writeResult(cog, instruction.getDest(), result);
+            }
+        }.andThen(incPC));
+        public OpCode ADDX = new OpCode(0b110010, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                int carry = (cog.getCFlag()) ? 1 : 0;
+                int result = source + dest + carry;
+                instruction.writeC(cog, getUnsignedCarry(source, dest + carry));
+                instruction.writeZ(cog, result == 0 && cog.getZFlag());
+                instruction.writeResult(cog, instruction.getDest(), result);
+            }
+        }.andThen(incPC));
+        public OpCode AND = new OpCode(0b011000, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                int result = source & dest;
 
-				instruction.writeC(cog, getParity(result));
-				instruction.writeZ(cog, result == 0);
-				instruction.writeResult(cog, instruction.getDest(), result);
-			}
-		}.andThen(incPC)),
-        ANDN(0b011001, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = instruction.getSourceValue(cog);
-				int dest = instruction.getDestValue(cog);
-				int result = ~source & dest;
+                instruction.writeC(cog, getParity(result));
+                instruction.writeZ(cog, result == 0);
+                instruction.writeResult(cog, instruction.getDest(), result);
+            }
+        }.andThen(incPC));
+        public OpCode ANDN = new OpCode(0b011001, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                int result = ~source & dest;
 
-				instruction.writeC(cog, getParity(result));
-				instruction.writeZ(cog, result == 0);
-				instruction.writeResult(cog, instruction.getDest(), result);
-			}
-		}.andThen(incPC)),
-        CMPS(0b110000, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
-				int source = instruction.getSourceValue(cog);
-				int dest = instruction.getDestValue(cog);
-				int result = dest - source;
+                instruction.writeC(cog, getParity(result));
+                instruction.writeZ(cog, result == 0);
+                instruction.writeResult(cog, instruction.getDest(), result);
+            }
+        }.andThen(incPC));
+        public OpCode CMPS = new OpCode(0b110000, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
+                int source = instruction.getSourceValue(cog);
+                int dest = instruction.getDestValue(cog);
+                int result = dest - source;
 
-				instruction.writeC(cog, dest < source);
-				instruction.writeZ(cog, result == 0);
-				instruction.writeResult(cog, instruction.getDest(), result);
-			}
-		}.andThen(incPC)),
-        CMPSUB(0b111000, new BiConsumer<Cog, Instruction>() {
-			@Override
-			public void accept(Cog cog, Instruction instruction) {
+                instruction.writeC(cog, dest < source);
+                instruction.writeZ(cog, result == 0);
+                instruction.writeResult(cog, instruction.getDest(), result);
+            }
+        }.andThen(incPC));
+        public OpCode CMPSUB = new OpCode(0b111000, new BiConsumer<Cog, Instruction>() {
+            @Override
+            public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
                 int dest = instruction.getDestValue(cog);
                 if (source <= dest) {
@@ -179,9 +181,9 @@ public class Instruction {
                     instruction.writeC(cog, false);
                     instruction.writeZ(cog, false);
                 }
-			}
-		}.andThen(incPC)),
-        CMPSX(0b110001, new BiConsumer<Cog, Instruction>() {
+            }
+        }.andThen(incPC));
+        public OpCode CMPSX = new OpCode(0b110001, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -191,8 +193,8 @@ public class Instruction {
                 instruction.writeZ(cog, dest == (source + carry));
                 instruction.writeResult(cog, instruction.getDest(), dest - (source + carry));
             }
-        }.andThen(incPC)),
-        DJNZ(0b111001, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode DJNZ = new OpCode(0b111001, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -201,16 +203,16 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
 
-                if (result == 0) {
+                if (result != 0) {
                     cog.setPC(source & 0x1FF);
                 } else {
                     // I really don't know the proper way to do this. So I am just going to make this a NOP and re-execute
                     // this should be kosher as long as the instruction object for execution is not used for display
-                    instruction.condition = Condition.IF_NEVER;
+                    instruction.condition = instruction.condition.IF_NEVER;
                 }
             }
-        }),
-        HUBOP(0b000011, IOPredicate(), new BiConsumer<Cog, Instruction>() {
+        });
+        public OpCode HUBOP = new OpCode(0b000011, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 // TODO create mechanism for HUBOP
@@ -233,8 +235,8 @@ public class Instruction {
                         break;
                 }
             }
-        }.andThen(incPC)),
-        JMPRET(0b010111, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode JMPRET = new OpCode(0b010111, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int retInstAddr = instruction.getDest();
@@ -248,8 +250,8 @@ public class Instruction {
                 instruction.writeResult(cog, retInstAddr, retAddr);
                 cog.setPC(jmpAddr & 0x1FF);
             }
-        }),
-        MAX(0b010011, new BiConsumer<Cog, Instruction>() {
+        });
+        public OpCode MAX = new OpCode(0b010011, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -264,8 +266,8 @@ public class Instruction {
                     instruction.writeResult(cog, instruction.getDest(), source);
                 }
             }
-        }.andThen(incPC)),
-        MAXS(0b010001, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MAXS = new OpCode(0b010001, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -274,8 +276,8 @@ public class Instruction {
                 instruction.writeZ(cog, source == 0);
                 instruction.writeResult(cog, instruction.getDest(), Integer.min(source, dest));
             }
-        }.andThen(incPC)),
-        MIN(0b010010, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MIN = new OpCode(0b010010, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -290,8 +292,8 @@ public class Instruction {
                     instruction.writeC(cog, false);
                 }
             }
-        }.andThen(incPC)),
-        MINS(0b010000, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MINS = new OpCode(0b010000, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -300,8 +302,8 @@ public class Instruction {
                 instruction.writeZ(cog, source == 0);
                 instruction.writeResult(cog, instruction.getDest(), Integer.max(source, dest));
             }
-        }.andThen(incPC)),
-        MOV(0b101000, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MOV = new OpCode(0b101000, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -309,27 +311,27 @@ public class Instruction {
                 instruction.writeZ(cog, source == 0);
                 instruction.writeResult(cog, instruction.getDest(), source);
             }
-        }.andThen(incPC)),
-        MOVD(0b010101, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MOVD = new OpCode(0b010101, new BiConsumer<Cog, Instruction>() {
             // TODO make mechanism for pipeline
             @Override
             public void accept(Cog cog, Instruction instruction) {
 
             }
-        }.andThen(incPC)),
-        MOVI(0b010110, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MOVI = new OpCode(0b010110, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
 
             }
-        }.andThen(incPC)),
-        MOVS(0b010100, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MOVS = new OpCode(0b010100, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
 
             }
-        }.andThen(incPC)),
-        MUXC(0b011100, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MUXC = new OpCode(0b011100, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int mask = instruction.getSourceValue(cog);
@@ -344,8 +346,8 @@ public class Instruction {
                 instruction.writeC(cog, getParity(result));
                 instruction.writeZ(cog, result == 0);
             }
-        }.andThen(incPC)),
-        MUXNC(0b011101, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MUXNC = new OpCode(0b011101, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int mask = instruction.getSourceValue(cog);
@@ -360,8 +362,8 @@ public class Instruction {
                 instruction.writeC(cog, getParity(result));
                 instruction.writeZ(cog, result == 0);
             }
-        }.andThen(incPC)),
-        MUXNZ(0b011111, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MUXNZ = new OpCode(0b011111, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int mask = instruction.getSourceValue(cog);
@@ -376,8 +378,8 @@ public class Instruction {
                 instruction.writeC(cog, getParity(result));
                 instruction.writeZ(cog, result == 0);
             }
-        }.andThen(incPC)),
-        MUXZ(0b011110, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode MUXZ = new OpCode(0b011110, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int mask = instruction.getSourceValue(cog);
@@ -392,8 +394,8 @@ public class Instruction {
                 instruction.writeC(cog, getParity(result));
                 instruction.writeZ(cog, result == 0);
             }
-        }.andThen(incPC)),
-        NEG(0b101001, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode NEG = new OpCode(0b101001, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -402,8 +404,8 @@ public class Instruction {
                 instruction.writeZ(cog, source == 0);
                 instruction.writeResult(cog, instruction.getDest(), -source);
             }
-        }.andThen(incPC)),
-        NEGC(0b101100, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode NEGC = new OpCode(0b101100, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -413,8 +415,8 @@ public class Instruction {
                 instruction.writeC(cog, source < 0);
                 instruction.writeZ(cog, source == 0);
             }
-        }.andThen(incPC)),
-        NEGNC(0b101101, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode NEGNC = new OpCode(0b101101, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -424,8 +426,8 @@ public class Instruction {
                 instruction.writeC(cog, source < 0);
                 instruction.writeZ(cog, source == 0);
             }
-        }.andThen(incPC)),
-        NEGNZ(0b101111, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode NEGNZ = new OpCode(0b101111, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -435,8 +437,8 @@ public class Instruction {
                 instruction.writeC(cog, source < 0);
                 instruction.writeZ(cog, source == 0);
             }
-        }.andThen(incPC)),
-        NEGZ(0b101110, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode NEGZ = new OpCode(0b101110, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -446,8 +448,8 @@ public class Instruction {
                 instruction.writeC(cog, source < 0);
                 instruction.writeZ(cog, source == 0);
             }
-        }.andThen(incPC)),
-        OR(0b011010, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode OR = new OpCode(0b011010, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -458,8 +460,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        RCL(0b001101, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode RCL = new OpCode(0b001101, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int bitCount = instruction.getSourceValue(cog) & 0b11111;
@@ -467,7 +469,7 @@ public class Instruction {
                 int carry = (cog.getCFlag()) ? 1 : 0;
                 boolean newCarry = value < 0;
                 int mask = 0;
-                for (int i=0; i<bitCount; i++)
+                for (int i = 0; i < bitCount; i++)
                     mask = (mask << 1) | carry;
                 value = (value << bitCount) | mask;
 
@@ -475,8 +477,8 @@ public class Instruction {
                 instruction.writeZ(cog, value == 0);
                 instruction.writeResult(cog, instruction.getDest(), value);
             }
-        }.andThen(incPC)),
-        RCR(0b001100, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode RCR = new OpCode(0b001100, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int bitCount = instruction.getSourceValue(cog) & 0b11111;
@@ -492,8 +494,8 @@ public class Instruction {
                 instruction.writeZ(cog, value == 0);
                 instruction.writeResult(cog, instruction.getDest(), value);
             }
-        }.andThen(incPC)),
-        RDBYTE(0b000000, IOPredicate(), new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode RDBYTE = new OpCode(0b000000, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int hubAddr = instruction.getSourceValue(cog);
@@ -510,8 +512,8 @@ public class Instruction {
                     instruction.writeZ(cog, (hubAddr & 0b11) != 0);
                 }
             }
-        }.andThen(incPC)),
-        RDLONG(0b000010, IOPredicate(), new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode RDLONG = new OpCode(0b000010, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int hubAddr = instruction.getSourceValue(cog);
@@ -528,8 +530,8 @@ public class Instruction {
                     instruction.writeZ(cog, (hubAddr & 0b11) != 0);
                 }
             }
-        }.andThen(incPC)),
-        RDWORD(0b000001, IOPredicate(), new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode RDWORD = new OpCode(0b000001, IOPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int hubAddr = instruction.getSourceValue(cog);
@@ -546,21 +548,21 @@ public class Instruction {
                     instruction.writeZ(cog, (hubAddr & 0b1) != 0);
                 }
             }
-        }.andThen(incPC)),
-        REV(0b001111, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode REV = new OpCode(0b001111, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int bitCount = 32 - (instruction.getSourceValue(cog) & 0b11111);
                 int value = instruction.getDestValue(cog);
                 int result = 0;
-                for (int i=0; i<bitCount; i++)
+                for (int i = 0; i < bitCount; i++)
                     result |= ((value & (1 << i)) >> i) << (bitCount - i - 1);
                 instruction.writeC(cog, (value & 1) == 1);
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        ROL(0b001001, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode ROL = new OpCode(0b001001, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int bitCount = instruction.getSourceValue(cog) & 0b11111;
@@ -571,8 +573,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        ROR(0b001000, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode ROR = new OpCode(0b001000, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int bitCount = instruction.getSourceValue(cog) & 0b11111;
@@ -583,8 +585,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SAR(0b001110, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SAR = new OpCode(0b001110, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int bitCount = instruction.getSourceValue(cog) & 0b11111;
@@ -595,8 +597,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SHL(0b001011, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SHL = new OpCode(0b001011, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int bitCount = instruction.getSourceValue(cog) & 0b11111;
@@ -607,8 +609,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SHR(0b001010, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SHR = new OpCode(0b001010, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int bitCount = instruction.getSourceValue(cog) & 0b11111;
@@ -619,8 +621,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUB(0b100001, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUB = new OpCode(0b100001, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -631,8 +633,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUBABS(0b100011, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUBABS = new OpCode(0b100011, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = Math.abs(instruction.getSourceValue(cog));
@@ -643,8 +645,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUBS(0b110101, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUBS = new OpCode(0b110101, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = Math.abs(instruction.getSourceValue(cog));
@@ -655,8 +657,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUBSX(0b110111, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUBSX = new OpCode(0b110111, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = Math.abs(instruction.getSourceValue(cog));
@@ -668,8 +670,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0 && cog.getZFlag());
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUBX(0b110011, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUBX = new OpCode(0b110011, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = Math.abs(instruction.getSourceValue(cog));
@@ -681,8 +683,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0 && cog.getZFlag());
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUMC(0b100100, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUMC = new OpCode(0b100100, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = ((cog.getCFlag()) ? -1 : 1) * instruction.getSourceValue(cog);
@@ -693,8 +695,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUMNC(0b100101, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUMNC = new OpCode(0b100101, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = ((cog.getCFlag()) ? 1 : -1) * instruction.getSourceValue(cog);
@@ -705,8 +707,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUMNZ(0b100111, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUMNZ = new OpCode(0b100111, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = ((cog.getZFlag()) ? 1 : -1) * instruction.getSourceValue(cog);
@@ -717,8 +719,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        SUMZ(0b100110, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode SUMZ = new OpCode(0b100110, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = ((cog.getZFlag()) ? -1 : 1) * instruction.getSourceValue(cog);
@@ -729,8 +731,8 @@ public class Instruction {
                 instruction.writeZ(cog, result == 0);
                 instruction.writeResult(cog, instruction.getDest(), result);
             }
-        }.andThen(incPC)),
-        TJNZ(0b111010, new BiConsumer<Cog, Instruction>() {
+        }.andThen(incPC));
+        public OpCode TJNZ = new OpCode(0b111010, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -744,11 +746,11 @@ public class Instruction {
                     cog.setPC(source & 0x1FF);
                 } else {
                     // same mechanism as DJNZ
-                    instruction.condition = Condition.IF_NEVER;
+                    instruction.condition = instruction.condition.IF_NEVER;
                 }
             }
-        }),
-        TJZ(0b111011, new BiConsumer<Cog, Instruction>() {
+        });
+        public OpCode TJZ = new OpCode(0b111011, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -762,11 +764,11 @@ public class Instruction {
                     cog.setPC(source & 0x1FF);
                 } else {
                     // same mechanism as DJNZ
-                    instruction.condition = Condition.IF_NEVER;
+                    instruction.condition = instruction.condition.IF_NEVER;
                 }
             }
-        }),
-        WAITCNT(0b111110, waitPredicate(), new BiConsumer<Cog, Instruction>() {
+        });
+        public OpCode WAITCNT = new OpCode(0b111110, waitPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int cnt = cog.getCnt();
@@ -781,8 +783,8 @@ public class Instruction {
                 instruction.writeResult(cog, instruction.getDest(), result);
                 incPC.accept(cog, instruction);
             }
-        }),
-        WAITPEQ(0b111100, waitPredicate(), new BiConsumer<Cog, Instruction>() {
+        });
+        public OpCode WAITPEQ = new OpCode(0b111100, waitPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int current = cog.getINA();
@@ -794,10 +796,10 @@ public class Instruction {
                 instruction.writeC(cog, false);
                 // ?!?!?!?!?! this is the actual behavior, shotty documentation
                 instruction.writeZ(cog, target + mask == 0);
-                instruction.writeResult(cog, instruction.getDest(), target+mask);
+                instruction.writeResult(cog, instruction.getDest(), target + mask);
             }
-        }),
-        WAITPNE(0b111101, waitPredicate(), new BiConsumer<Cog, Instruction>() {
+        });
+        public OpCode WAITPNE = new OpCode(0b111101, waitPredicate(), new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int current = cog.getINA();
@@ -809,16 +811,16 @@ public class Instruction {
                 // "whatever it naturally ended up being"
                 instruction.writeC(cog, target + mask + 1 == 0);
                 instruction.writeZ(cog, target + mask + 1 == 0);
-                instruction.writeResult(cog, instruction.getDest(), target+mask+1);
+                instruction.writeResult(cog, instruction.getDest(), target + mask + 1);
             }
-        }),
-        WAITVID(0b111111, new BiConsumer<Cog, Instruction>() {
+        });
+        public OpCode WAITVID = new OpCode(0b111111, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 // TODO
             }
-        }),
-        XOR(0b011011, new BiConsumer<Cog, Instruction>() {
+        });
+        public OpCode XOR = new OpCode(0b011011, new BiConsumer<Cog, Instruction>() {
             @Override
             public void accept(Cog cog, Instruction instruction) {
                 int source = instruction.getSourceValue(cog);
@@ -855,6 +857,42 @@ public class Instruction {
             this(instr, waitNPredicate(4));
         }
 
+        public OpCode() {
+            //Return a sad, broken opcode
+            this.instr = 0;
+            this.exec_fn = null;
+            this.executable = null;
+        }
+
+        public ArrayList<OpCode> values() {
+            ArrayList<OpCode> retval = new ArrayList<>();
+            for (Field f : this.getClass().getFields()) {
+                if (f.getType().equals(this.getClass())) {
+                    try {
+                        retval.add((OpCode) f.get(this));
+                    } catch (IllegalAccessException e) {
+
+                    }
+                }
+            }
+            return retval;
+        }
+
+        public String name() {
+            for (Field f : this.getClass().getFields()) {
+                if (f.getType().equals(this.getClass())) {
+                    try {
+                        if (f.get(this).equals(this)) {
+                            return f.getName();
+                        }
+                    } catch (IllegalAccessException e) {
+                        //pass
+                    }
+                }
+            }
+            return "";
+        }
+
         public int getInstr() {
             return this.instr;
         }
@@ -867,43 +905,43 @@ public class Instruction {
             exec_fn.accept(cog, ins);
         }
 
-		/**
-		 * Calculates the carry bit resulting from the addition of two signed integers a & b
-		 * This assumes that the formula is a+b. Therefore to calculate carry from a-b, pass a and -b
-		 *
-		 * @param a first element of addition
-		 * @param b second element of addition
+        /**
+         * Calculates the carry bit resulting from the addition of two signed integers a & b
+         * This assumes that the formula is a+b. Therefore to calculate carry from a-b, pass a and -b
+         *
+         * @param a first element of addition
+         * @param b second element of addition
          * @return returns whether or not a carry bit is generated from a+b
          */
-		public static boolean getSignedCarry(int a, int b) {
-			if (a > 0 && b > Integer.MAX_VALUE - a)
-				return true;
-			if (a < 0 && b < Integer.MIN_VALUE - a)
-				return true;
-			return false;
-		}
+        public boolean getSignedCarry(int a, int b) {
+            if (a > 0 && b > Integer.MAX_VALUE - a)
+                return true;
+            if (a < 0 && b < Integer.MIN_VALUE - a)
+                return true;
+            return false;
+        }
 
-		/**
-		 * Calculates the carry bit resulting from the addition of two unsigned integers a & b
-		 * This assumes that the formula is a+b. To calculate the carry from a-b, pass -a and b
-		 *
-		 * @param a first element of addition
-		 * @param b second element of addition
-		 * @return returns whether or not a carry bit is generated from a+b
-		 */
-		public static boolean getUnsignedCarry(int a, int b) {
-			if (a < 0 && b < 0)
+        /**
+         * Calculates the carry bit resulting from the addition of two unsigned integers a & b
+         * This assumes that the formula is a+b. To calculate the carry from a-b, pass -a and b
+         *
+         * @param a first element of addition
+         * @param b second element of addition
+         * @return returns whether or not a carry bit is generated from a+b
+         */
+        public boolean getUnsignedCarry(int a, int b) {
+            if (a < 0 && b < 0)
                 return true;
             if (b < 0 && b >= -a)
                 return true;
             if (a < 0 && b >= -a)
                 return true;
-			return false;
-		}
+            return false;
+        }
 
-        public static boolean getParity(int n) {
+        public boolean getParity(int n) {
             int parity = 0;
-            for (int i=0; i<32; i++)
+            for (int i = 0; i < 32; i++)
                 parity ^= (n >> i) & 1;
             return parity == 1;
         }
@@ -916,19 +954,24 @@ public class Instruction {
     /**
      * Do not make static! Non-static prevents conditionals from affecting one another
      */
-    public enum Condition {
+    public class Condition {
 
-        IF_ALWAYS(0b1111, c -> true), IF_NEVER(0b0000, c -> false), IF_Z(0b1010, ifZ), IF_NZ(0b0101,
-                ifZ.negate()), IF_C(0b1100, ifC), IF_NC(0b0011, ifC.negate()), IF_Z_AND_C(0b1000,
-                ifZ.and(ifC)), IF_Z_OR_C(0b1110, ifZ.or(ifC)), IF_Z_EQ_C(0b1001,
-                c -> c.getZFlag() == c.getCFlag()), IF_Z_NE_C(0b0110,
-                c -> c.getZFlag() != c.getCFlag()), IF_NZ_AND_NC(0b0001,
-                ifZ.negate().and(ifC.negate())), IF_NZ_OR_NC(0b0111,
-                ifZ.negate().or(ifC.negate())), IF_Z_AND_NC(0b0010,
-                ifZ.and(ifC.negate())), IF_Z_OR_NC(0b1011,
-                ifZ.or(ifC.negate())), IF_NZ_AND_C(0b0100,
-                ifZ.negate().and(ifC)), IF_NZ_OR_C(
-                0b1101, ifZ.negate().or(ifC));
+        public Condition IF_ALWAYS = new Condition(0b1111, c -> true);
+        public Condition IF_NEVER = new Condition(0b0000, c -> false);
+        public Condition IF_Z = new Condition(0b1010, ifZ);
+        public Condition IF_NZ = new Condition(0b0101, ifZ.negate());
+        public Condition IF_C = new Condition(0b1100, ifC);
+        public Condition IF_NC = new Condition(0b0011, ifC.negate());
+        public Condition IF_Z_AND_C = new Condition(0b1000, ifZ.and(ifC));
+        public Condition IF_Z_OR_C = new Condition(0b1110, ifZ.or(ifC));
+        public Condition IF_Z_EQ_C = new Condition(0b1001, c -> c.getZFlag() == c.getCFlag());
+        public Condition IF_Z_NE_C = new Condition(0b0110, c -> c.getZFlag() != c.getCFlag());
+        public Condition IF_NZ_AND_NC = new Condition(0b0001, ifZ.negate().and(ifC.negate()));
+        public Condition IF_NZ_OR_NC = new Condition(0b0111, ifZ.negate().or(ifC.negate()));
+        public Condition IF_Z_AND_NC = new Condition(0b0010, ifZ.and(ifC.negate()));
+        public Condition IF_Z_OR_NC = new Condition(0b1011, ifZ.or(ifC.negate()));
+        public Condition IF_NZ_AND_C = new Condition(0b0100, ifZ.negate().and(ifC));
+        public Condition IF_NZ_OR_C = new Condition(0b1101, ifZ.negate().or(ifC));
 
         private final int cond;
 
@@ -939,12 +982,46 @@ public class Instruction {
             this.test = test;
         }
 
+        public Condition() {
+            this.cond = 0;
+            this.test = null;
+        }
+
         public int getCond() {
             return this.cond;
         }
 
         public boolean testCond(Cog c) {
             return test.test(c);
+        }
+
+        public ArrayList<Condition> values() {
+            ArrayList<Condition> retval = new ArrayList<>();
+            for (Field f : this.getClass().getFields()) {
+                if (f.getType().equals(this.getClass())) {
+                    try {
+                        retval.add((Condition) f.get(this));
+                    } catch (IllegalAccessException e) {
+
+                    }
+                }
+            }
+            return retval;
+        }
+
+        public String name() {
+            for (Field f : this.getClass().getFields()) {
+                if (f.getType().equals(this.getClass())) {
+                    try {
+                        if (f.get(this).equals(this)) {
+                            return f.getName();
+                        }
+                    } catch (IllegalAccessException e) {
+                        //pass
+                    }
+                }
+            }
+            return "";
         }
     }
 
@@ -960,7 +1037,7 @@ public class Instruction {
 
     public Instruction(int encoded) {
         int instr = (encoded >> (32 - 6)) & 0b111111;
-        for (OpCode opcode : OpCode.values()) {
+        for (OpCode opcode : new OpCode().values()) {
             if (instr == opcode.getInstr()) {
                 this.opcode = opcode;
             }
@@ -973,7 +1050,7 @@ public class Instruction {
         this.write_result = (zrci & 0b10) != 0;
         this.immediate = (zrci & 0b1) != 0;
         int cond = (encoded >> (32 - 6 - 4 - 4)) & 0b1111;
-        for (Condition condition : Condition.values()) {
+        for (Condition condition : new Condition().values()) {
             if (cond == condition.getCond()) {
                 this.condition = condition;
             }
@@ -987,9 +1064,9 @@ public class Instruction {
         return destination;
     }
 
-	public int getDestValue(Cog cog) {
-		return cog.getLong(this.destination);
-	}
+    public int getDestValue(Cog cog) {
+        return cog.getLong(this.destination);
+    }
 
     public int getSourceValue(Cog cog) {
         if (this.immediate) {
@@ -1097,43 +1174,37 @@ public class Instruction {
 
 
         opcode = this.opcode.name();
-        cond = (this.condition.equals(Condition.IF_ALWAYS)) ? "" : this.condition.name();
+        cond = (this.condition.equals(this.condition.IF_ALWAYS)) ? "" : this.condition.name();
         dest = register2string(destination, false);
         src = register2string(source, immediate);
         effects = (this.write_result) ? "wr" : "nr";
         effects += ((this.write_carry) ? ",wc" : "") + ((this.write_zero) ? ",wz" : "");
 
-        if (!this.write_result)
-            switch (this.opcode) {
-                case RDBYTE:
-                    opcode = "WRBYTE";
-                    break;
-                case RDWORD:
-                    opcode = "WRWORD";
-                    break;
-                case RDLONG:
-                    opcode = "WRLONG";
-                    break;
-                case AND:
-                    opcode = "TEST";
-                    break;
-                case ANDN:
-                    opcode = "TESTN";
-                    break;
-                case SUB:
-                    opcode = "CMP";
-                    break;
-                case SUBX:
-                    opcode = "CMPX";
-                    break;
-                case JMPRET:
-                    dest = src;
-                    src = "";
-                    opcode = "JMP";
-                    break;
+        if (!this.write_result) {
+            if (this.opcode == this.opcode.RDBYTE) {
+                opcode = "WRBYTE";
+            } else if (this.opcode == this.opcode.RDWORD) {
+                opcode = "WRWORD";
+            } else if (this.opcode == this.opcode.RDLONG) {
+                opcode = "WRLONG";
+            } else if (this.opcode == this.opcode.AND) {
+                opcode = "TEST";
+            } else if (this.opcode == this.opcode.ANDN) {
+                opcode = "TESTN";
+            } else if (this.opcode == this.opcode.SUB) {
+                opcode = "CMP";
+            } else if (this.opcode == this.opcode.SUBX) {
+                opcode = "CMPX";
+            } else if (this.opcode == this.opcode.JMPRET) {
+                dest = src;
+                src = "";
+                opcode = "JMP";
             }
+        }
 
-        if (this.opcode.equals(OpCode.HUBOP)) {
+        if (this.opcode == this.opcode.HUBOP)
+
+        {
             src = "";
             if (this.source == 0)
                 opcode = "CLKSET";
