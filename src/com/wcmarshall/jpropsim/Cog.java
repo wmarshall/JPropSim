@@ -144,7 +144,7 @@ public class Cog {
         this.prog_load_count = 0;
         this.setCFlag(false);
         this.setZFlag(false);
-        setLong(PAR_ADDR, arg);
+        cogram[PAR_ADDR] = arg;
     }
 
     public void stop() {

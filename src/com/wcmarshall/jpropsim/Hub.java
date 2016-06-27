@@ -22,10 +22,24 @@ public class Hub {
             cogs[i] = new Cog(this, i);
         }
 
+		// load ROM file (only used for char set and tables)
 		FileInputStream input = new FileInputStream(new File("rom.bin"));
 		input.read(hubrom);
 		input.close();
-    }
+		// load interpreter into proper starting position
+		input = new FileInputStream(new File("interpreter.bin"));
+		input.read(hubrom, 0xF004 - 0x8000, 0x10000 - 0xF004);
+		input.close();
+		// pretend we're the bootloader and start the interpreter in cog 0
+		initCog((1 << 18) + (0x3C01 << 4));
+	}
+
+	public Hub(File binFile) throws IOException {
+		this();
+		FileInputStream input = new FileInputStream(binFile);
+		input.read(hubram);
+		input.close();
+	}
 
 	/**
 	 * Initializes a COG
@@ -71,9 +85,10 @@ public class Hub {
 	}
 
     private int readBytes(int base, int count) {
-
 		int retval = 0;
 		byte[] memory;
+
+		base &= 0xFFFF;
 
 		if (base < HUB_RAM_SIZE) {
 			memory = hubram;
@@ -90,6 +105,9 @@ public class Hub {
     }
 
 	private void writeBytes(int base, int value, int count) {
+
+		base &= 0xFFFF;
+
 		if (base >= HUB_RAM_SIZE) return;
 
 		for (int i = 0; i < count; i++) {
