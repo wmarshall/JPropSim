@@ -83,7 +83,7 @@ public class ExecutionTest {
                 int length = user.nextInt();
 
                 for (int i=0; i<length; i+=8) {
-                    System.out.printf("\n%04X    ", addr);
+                    System.out.printf("\n%04X    ", addr+i);
                     for (int j=0; j<Math.min(length-i, 8); j++) {
                         System.out.printf("%02X", hub.getByte(addr+i+j));
                         if (j == 3) System.out.print("  ");
@@ -105,6 +105,31 @@ public class ExecutionTest {
                 System.out.print("\nSTATE {0,1}: ");
                 boolean state = user.nextInt() == 1;
                 hub.setPinIn(pin, state);
+            } else if (cmd.equalsIgnoreCase("break")) {
+                System.out.print("\nCOG NUMBER: ");
+                int cog = user.nextInt();
+                if (cog < 0 || cog > 7) {
+                    System.out.println("\nCog must be in range [0, 7]");
+                    continue;
+                }
+
+                System.out.print("\nhex addr or '$' for current: ");
+                String value = user.next();
+                int address;
+                if (value.equals("$")) {
+                    address = hub.getCog(cog).getPC();
+                } else {
+                    try {
+                        address = Integer.parseInt(value, 16);
+                    } catch (Exception e) {
+                        System.out.println("Value must be in hex");
+                        continue;
+                    }
+                }
+
+                hub.bpm.toggleBreakpoint(cog, address);
+            } else if (cmd.equalsIgnoreCase("run")) {
+                hub.run();
             } else {
                 System.out.println("Unknown command");
             }

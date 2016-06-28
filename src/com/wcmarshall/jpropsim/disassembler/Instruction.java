@@ -111,7 +111,7 @@ public class Instruction {
 				int dest = instruction.getDestValue(cog);
 				int carry = (cog.getCFlag()) ? 1 : 0;
 				int result = source + dest + carry;
-				instruction.writeC(cog, getSignedCarry(source, dest+carry));
+				instruction.writeC(cog, getSignedCarry(source, dest+carry) || getSignedCarry(dest, carry));
 				instruction.writeZ(cog, result == 0 && cog.getZFlag());
 				instruction.writeResult(cog, instruction.getDest(), result);
 			}
@@ -123,7 +123,7 @@ public class Instruction {
 				int dest = instruction.getDestValue(cog);
 				int carry = (cog.getCFlag()) ? 1 : 0;
 				int result = source + dest + carry;
-				instruction.writeC(cog, getUnsignedCarry(source, dest+carry));
+				instruction.writeC(cog, getUnsignedCarry(source, dest+carry) || getUnsignedCarry(dest, carry));
 				instruction.writeZ(cog, result == 0 && cog.getZFlag());
 				instruction.writeResult(cog, instruction.getDest(), result);
 			}
@@ -329,8 +329,8 @@ public class Instruction {
             public void accept(Cog cog, Instruction instruction) {
                 int value = instruction.getSourceValue(cog);
                 int dest = instruction.getDestValue(cog);
-                dest &= ~(0b111111111 << 9);
-                dest |= value << 9;
+                dest &= ~(0b111_111_111 << 9);
+                dest |= (value & 0b111_111_111) << 9;
 
                 instruction.writeC(cog, dest < 0);
                 instruction.writeZ(cog, dest == 0);
@@ -342,8 +342,8 @@ public class Instruction {
             public void accept(Cog cog, Instruction instruction) {
                 int value = instruction.getSourceValue(cog);
                 int dest = instruction.getDestValue(cog);
-                dest &= ~(0b111111 << 23);
-                dest |= value << 23;
+                dest &= ~(0b111_111_111 << 23);
+                dest |= (value & 0b111_111_111) << 23;
 
                 instruction.writeC(cog, dest < 0);
                 instruction.writeZ(cog, dest == 0);
@@ -355,8 +355,8 @@ public class Instruction {
             public void accept(Cog cog, Instruction instruction) {
                 int value = instruction.getSourceValue(cog);
                 int dest = instruction.getDestValue(cog);
-                dest &= ~(0b111111111);
-                dest |= value;
+                dest &= ~(0b111_111_111);
+                dest |= (value & 0b111_111_111);
 
                 instruction.writeC(cog, dest < 0);
                 instruction.writeZ(cog, dest == 0);

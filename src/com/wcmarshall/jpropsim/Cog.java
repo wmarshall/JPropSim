@@ -45,6 +45,10 @@ public class Cog {
         this.counterB = new Counter(this);
     }
 
+    public Instruction getInstruction() {
+        return current;
+    }
+
     public int getID() {
         return id;
     }

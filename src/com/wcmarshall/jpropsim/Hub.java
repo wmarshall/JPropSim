@@ -6,7 +6,9 @@ import java.io.IOException;
 
 public class Hub {
 
-    private static final int NUM_COGS = 8;
+	public static BreakpointManager bpm = new BreakpointManager();
+
+	private static final int NUM_COGS = 8;
     private static final int HUB_RAM_SIZE = 32768;
 	private static final int HUB_ROM_SIZE = 32768;
     private Cog[] cogs = new Cog[NUM_COGS];
@@ -199,4 +201,10 @@ public class Hub {
 			this.alignment = (this.alignment + 1) % NUM_COGS;
 		}
     }
+
+	public void run() {
+		do {
+			tick();
+		}while (!bpm.breakNow(this));
+	}
 }
