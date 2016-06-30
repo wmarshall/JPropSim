@@ -164,7 +164,7 @@ public class Cog {
     }
 
     public boolean isActive() {
-        return isRunning() && !prog_loaded;
+        return isRunning() && prog_loaded;
     }
 
     public int getCnt() {
