@@ -163,6 +163,10 @@ public class Cog {
         return this.running;
     }
 
+    public boolean isActive() {
+        return isRunning() && !prog_loaded;
+    }
+
     public int getCnt() {
         return hub.getCnt();
     }

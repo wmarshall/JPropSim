@@ -22,7 +22,7 @@ public class BreakpointManager {
 
         @Override
         public boolean test(Hub hub) {
-            return active && hub.getCog(cogid).getPC() == address && hub.getCog(cogid).getInstruction().getCycles() == 0;
+            return active && hub.getCog(cogid).getPC() == address && hub.getCog(cogid).isActive() && hub.getCog(cogid).getInstruction().getCycles() == 0;
         }
 
         public boolean equals(Object o) {
