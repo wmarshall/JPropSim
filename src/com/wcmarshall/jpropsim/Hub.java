@@ -9,11 +9,15 @@ public class Hub {
 	public static BreakpointManager bpm = new BreakpointManager();
 
 	private static final int NUM_COGS = 8;
+	private static final int NUM_LOCKS = 8;
     private static final int HUB_RAM_SIZE = 32768;
 	private static final int HUB_ROM_SIZE = 32768;
     private Cog[] cogs = new Cog[NUM_COGS];
     private byte[] hubram = new byte[HUB_RAM_SIZE];
 	private byte[] hubrom = new byte[HUB_ROM_SIZE];
+
+	private boolean lockState[] = new boolean[NUM_LOCKS];
+	private boolean lockAlloc[] = new boolean[NUM_LOCKS];
 
     private int alignment = 0;
 	private int cnt = 0;
@@ -84,6 +88,42 @@ public class Hub {
 		id &= 0b111;
 		cogs[id].stop();
 		return carry;
+	}
+
+	public int newLock() {
+		for (int i = 0; i < NUM_LOCKS; i++) {
+			if (!lockAlloc[i]) {
+				lockAlloc[i] = lockState[i] = true;
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	public boolean setLock(int lockID) {
+		boolean state = lockState[lockID];
+		lockState[lockID] = true;
+		return state;
+	}
+
+	public boolean clearLock(int lockID) {
+		boolean state = lockState[lockID];
+		lockState[lockID] = false;
+		return state;
+	}
+
+	public int retLock(int lockID) {
+		lockAlloc[lockID] = lockState[lockID] = false;
+		return lockID;
+	}
+
+	public boolean locksAreAvailable() {
+		boolean any = false;
+
+		for (int i=0; i<NUM_LOCKS; i++) {
+			any |= lockAlloc[i];
+		}
+		return any;
 	}
 
     private int readBytes(int base, int count) {

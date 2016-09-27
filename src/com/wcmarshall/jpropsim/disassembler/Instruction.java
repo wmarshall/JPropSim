@@ -214,7 +214,8 @@ public class Instruction {
             @Override
             public void accept(Cog cog, Instruction instruction) {
 
-                int cogid;
+                int cogid, lockid;
+                boolean last;
 
                 switch (instruction.getSourceValue(cog)) {
                     case 0: // CLKSET
@@ -237,12 +238,28 @@ public class Instruction {
                         instruction.writeZ(cog, cogid == 0);
                         break;
                     case 4: // LOCKNEW
+                        lockid = cog.getHub().newLock();
+                        instruction.writeResult(cog, instruction.getDest(), (lockid == -1) ? 7 : lockid);
+                        instruction.writeZ(cog, lockid == 0);
+                        instruction.writeC(cog, lockid == -1);
                         break;
                     case 5: // LOCKRET
+                        instruction.writeC(cog, cog.getHub().locksAreAvailable());
+                        lockid = cog.getHub().retLock(instruction.getDestValue(cog) & 7);
+                        instruction.writeResult(cog, instruction.getDest(), lockid);
+                        instruction.writeZ(cog, (lockid == 0));
                         break;
                     case 6: // LOCKSET
+                        last = cog.getHub().setLock(instruction.getDestValue(cog) & 7);
+                        instruction.writeResult(cog, instruction.getDest(), instruction.getDestValue(cog) & 7);
+                        instruction.writeZ(cog, (instruction.getDestValue(cog) & 7) == 0);
+                        instruction.writeC(cog, last);
                         break;
                     case 7: // LOCKCLR
+                        last = cog.getHub().clearLock(instruction.getDestValue(cog) & 7);
+                        instruction.writeResult(cog, instruction.getDest(), instruction.getDestValue(cog) & 7);
+                        instruction.writeZ(cog, (instruction.getDestValue(cog) & 7) == 0);
+                        instruction.writeC(cog, last);
                         break;
                 }
             }
