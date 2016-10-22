@@ -45,6 +45,10 @@ public class Cog {
         this.counterB = new Counter(this);
     }
 
+    public Instruction getInstruction() {
+        return current;
+    }
+
     public int getID() {
         return id;
     }
@@ -55,14 +59,14 @@ public class Cog {
 
     public void setPC(int n) {
         pc = n;
-        current = new Instruction(cogram[pc]);
-        next = new Instruction(cogram[pc+1]);
+        current = new Instruction(this, cogram[pc]);
+        next = new Instruction(this, cogram[pc+1]);
     }
 
     public void incrementPC() {
         pc++;
         current = next;
-        next = new Instruction(cogram[pc+1]);
+        next = new Instruction(this, cogram[pc+1]);
     }
 
     public int[] getCogram() {
@@ -159,6 +163,10 @@ public class Cog {
         return this.running;
     }
 
+    public boolean isActive() {
+        return isRunning() && prog_loaded;
+    }
+
     public int getCnt() {
         return hub.getCnt();
     }
@@ -166,7 +174,7 @@ public class Cog {
     public void tick() {
         if (running) {
             if (prog_loaded) {
-                current.execute(this);
+                current.execute();
                 // update counters
                 setLong(PHSA_ADDR, counterA.tick(getLong(CTRA_ADDR), getLong(FRQA_ADDR), getLong(PHSA_ADDR)));
                 setLong(PHSB_ADDR, counterB.tick(getLong(CTRB_ADDR), getLong(FRQB_ADDR), getLong(PHSB_ADDR)));

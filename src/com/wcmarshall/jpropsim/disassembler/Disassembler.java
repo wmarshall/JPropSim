@@ -17,7 +17,7 @@ public class Disassembler {
 	}
 
 	public String disassemble(int instruction) {
-		return new Instruction(instruction).toString();
+		return new Instruction(null, instruction).toString();
 	}
 
 	public String generateListing(File fin) throws IOException {
