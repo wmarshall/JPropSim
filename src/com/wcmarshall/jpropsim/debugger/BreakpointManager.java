@@ -1,4 +1,6 @@
-package com.wcmarshall.jpropsim;
+package com.wcmarshall.jpropsim.debugger;
+
+import com.wcmarshall.jpropsim.Hub;
 
 import java.util.ArrayList;
 import java.util.function.Predicate;
@@ -25,10 +27,25 @@ public class BreakpointManager {
             return active && hub.getCog(cogid).getPC() == address && hub.getCog(cogid).isActive() && hub.getCog(cogid).getInstruction().getCycles() == 0;
         }
 
+        @Override
         public boolean equals(Object o) {
-            if (!(o instanceof Breakpoint)) return false;
-            Breakpoint other = (Breakpoint) o;
-            return other.cogid == this.cogid && other.address == this.address;
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Breakpoint that = (Breakpoint) o;
+
+            if (cogid != that.cogid) return false;
+            if (address != that.address) return false;
+            return active == that.active;
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = cogid;
+            result = 31 * result + address;
+            result = 31 * result + (active ? 1 : 0);
+            return result;
         }
 
         public void toggle() {
